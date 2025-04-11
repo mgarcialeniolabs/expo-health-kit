@@ -72,7 +72,7 @@ public class ExpoHealthKitModule: Module {
     }
     
     // Fetch step count for a specific time period
-    AsyncFunction("getStepCount") { (startDate: Date, endDate: Date, promise: Promise) in
+    AsyncFunction("getStepCount") { (startTimestamp: Double, endTimestamp: Double, promise: Promise) in
       guard HKHealthStore.isHealthDataAvailable() else {
         promise.reject(
           "E_HEALTHKIT_UNAVAILABLE",
@@ -80,6 +80,10 @@ public class ExpoHealthKitModule: Module {
         )
         return
       }
+      
+      // Convert timestamps to Date objects
+      let startDate = Date(timeIntervalSince1970: startTimestamp / 1000.0)
+      let endDate = Date(timeIntervalSince1970: endTimestamp / 1000.0)
       
       let stepsQuantityType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
       
