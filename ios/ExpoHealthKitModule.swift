@@ -41,80 +41,76 @@ public class ExpoHealthKitModule: Module {
     }
     
     // Request permissions for steps data
-    AsyncFunction("requestPermissions") { () -> Promise in
-      return Promise { resolver in
-        guard HKHealthStore.isHealthDataAvailable() else {
-          resolver.reject(
-            "E_HEALTHKIT_UNAVAILABLE",
-            "HealthKit is not available on this device"
+    AsyncFunction("requestPermissions") { (promise: Promise) in
+      guard HKHealthStore.isHealthDataAvailable() else {
+        promise.reject(
+          exception: "E_HEALTHKIT_UNAVAILABLE",
+          message: "HealthKit is not available on this device"
+        )
+        return
+      }
+      
+      let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+      
+      healthStore.requestAuthorization(toShare: [], read: [stepsType]) { success, error in
+        if let error = error {
+          promise.reject(
+            exception: "E_HEALTHKIT_PERMISSIONS",
+            message: "Failed to request HealthKit permissions: \(error.localizedDescription)"
           )
           return
         }
         
-        let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        self.sendEvent("onPermissionsResult", [
+          "success": success
+        ])
         
-        healthStore.requestAuthorization(toShare: [], read: [stepsType]) { success, error in
-          if let error = error {
-            resolver.reject(
-              "E_HEALTHKIT_PERMISSIONS",
-              "Failed to request HealthKit permissions: \(error.localizedDescription)"
-            )
-            return
-          }
-          
-          self.sendEvent("onPermissionsResult", [
-            "success": success
-          ])
-          
-          resolver.resolve([
-            "success": success
-          ])
-        }
+        promise.resolve([
+          "success": success
+        ])
       }
     }
     
     // Fetch step count for a specific time period
-    AsyncFunction("getStepCount") { (startDate: Date, endDate: Date) -> Promise in
-      return Promise { resolver in
-        guard HKHealthStore.isHealthDataAvailable() else {
-          resolver.reject(
-            "E_HEALTHKIT_UNAVAILABLE",
-            "HealthKit is not available on this device"
-          )
+    AsyncFunction("getStepCount") { (startDate: Date, endDate: Date, promise: Promise) in
+      guard HKHealthStore.isHealthDataAvailable() else {
+        promise.reject(
+          exception: "E_HEALTHKIT_UNAVAILABLE",
+          message: "HealthKit is not available on this device"
+        )
+        return
+      }
+      
+      let stepsQuantityType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+      
+      let predicate = HKQuery.predicateForSamples(
+        withStart: startDate,
+        end: endDate,
+        options: .strictStartDate
+      )
+      
+      let query = HKStatisticsQuery(
+        quantityType: stepsQuantityType,
+        quantitySamplePredicate: predicate,
+        options: .cumulativeSum
+      ) { _, result, error in
+        guard let result = result, let sum = result.sumQuantity() else {
+          if let error = error {
+            promise.reject(
+              exception: "E_HEALTHKIT_QUERY_ERROR",
+              message: "Failed to fetch step count: \(error.localizedDescription)"
+            )
+          } else {
+            promise.resolve(0)
+          }
           return
         }
         
-        let stepsQuantityType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
-        
-        let predicate = HKQuery.predicateForSamples(
-          withStart: startDate,
-          end: endDate,
-          options: .strictStartDate
-        )
-        
-        let query = HKStatisticsQuery(
-          quantityType: stepsQuantityType,
-          quantitySamplePredicate: predicate,
-          options: .cumulativeSum
-        ) { _, result, error in
-          guard let result = result, let sum = result.sumQuantity() else {
-            if let error = error {
-              resolver.reject(
-                "E_HEALTHKIT_QUERY_ERROR",
-                "Failed to fetch step count: \(error.localizedDescription)"
-              )
-            } else {
-              resolver.resolve(0)
-            }
-            return
-          }
-          
-          let steps = sum.doubleValue(for: HKUnit.count())
-          resolver.resolve(steps)
-        }
-        
-        healthStore.execute(query)
+        let steps = sum.doubleValue(for: HKUnit.count())
+        promise.resolve(steps)
       }
+      
+      healthStore.execute(query)
     }
   }
 }
