@@ -52,7 +52,8 @@ public class ExpoHealthKitModule: Module {
       
       let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
       
-      healthStore.requestAuthorization(toShare: [], read: [stepsType]) { success, error in
+      // Request both read and write permissions for steps
+      healthStore.requestAuthorization(toShare: [stepsType], read: [stepsType]) { success, error in
         if let error = error {
           promise.reject(
             "E_HEALTHKIT_PERMISSIONS",
@@ -117,6 +118,45 @@ public class ExpoHealthKitModule: Module {
       healthStore.execute(query)
     }
     
+    // Save step count data to HealthKit
+    AsyncFunction("saveStepCount") { (steps: Double, startTimestamp: Double, endTimestamp: Double, promise: Promise) in
+      guard HKHealthStore.isHealthDataAvailable() else {
+        promise.reject(
+          "E_HEALTHKIT_UNAVAILABLE",
+          "HealthKit is not available on this device"
+        )
+        return
+      }
+      
+      // Convert timestamps to Date objects
+      let startDate = Date(timeIntervalSince1970: startTimestamp / 1000.0)
+      let endDate = Date(timeIntervalSince1970: endTimestamp / 1000.0)
+      
+      let stepsQuantityType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+      
+      // Create a quantity sample
+      let quantity = HKQuantity(unit: HKUnit.count(), doubleValue: steps)
+      let sample = HKQuantitySample(
+        type: stepsQuantityType,
+        quantity: quantity,
+        start: startDate,
+        end: endDate
+      )
+      
+      // Save the sample to HealthKit
+      healthStore.save(sample) { success, error in
+        if let error = error {
+          promise.reject(
+            "E_HEALTHKIT_SAVE_ERROR",
+            "Failed to save step count data: \(error.localizedDescription)"
+          )
+          return
+        }
+        
+        promise.resolve(success)
+      }
+    }
+    
     // Check if HealthKit is available and authorized for the requested data types
     AsyncFunction("getAuthorizationStatus") { (promise: Promise) in
       // Check if HealthKit is available on the device
@@ -125,7 +165,9 @@ public class ExpoHealthKitModule: Module {
       if !isAvailable {
         promise.resolve([
           "isAvailable": false,
-          "isAuthorized": false
+          "isAuthorized": false,
+          "canRead": false,
+          "canWrite": false
         ])
         return
       }
@@ -135,11 +177,16 @@ public class ExpoHealthKitModule: Module {
       
       let authStatus = healthStore.authorizationStatus(for: stepsType)
       
-      let isAuthorized = (authStatus == .sharingAuthorized)
+      // Check different authorization statuses
+      let canRead = (authStatus == .sharingAuthorized)
+      let canWrite = (authStatus == .sharingAuthorized)
+      let isAuthorized = canRead || canWrite
       
       promise.resolve([
         "isAvailable": true,
-        "isAuthorized": isAuthorized
+        "isAuthorized": isAuthorized,
+        "canRead": canRead,
+        "canWrite": canWrite
       ])
     }
   }

@@ -17,7 +17,7 @@ declare class ExpoHealthKitModule extends NativeModule<ExpoHealthKitModuleEvents
   isHealthKitAvailable(): boolean;
 
   /**
-   * Request permissions for step count data
+   * Request permissions for reading and writing step count data
    */
   requestPermissions(): Promise<PermissionsResponse>;
 
@@ -29,8 +29,20 @@ declare class ExpoHealthKitModule extends NativeModule<ExpoHealthKitModuleEvents
   getStepCount(startDate: number, endDate: number): Promise<number>;
 
   /**
-   * Check if HealthKit is available and if step count data has been authorized
-   * @returns Object with isAvailable and isAuthorized status
+   * Save step count data to HealthKit
+   * @param steps Number of steps to save
+   * @param startDate Start date for the step count sample
+   * @param endDate End date for the step count sample
+   */
+  saveStepCount(
+    steps: number,
+    startDate: number,
+    endDate: number
+  ): Promise<boolean>;
+
+  /**
+   * Check if HealthKit is available and if step count data has been authorized for reading/writing
+   * @returns Object with isAvailable, isAuthorized, canRead, and canWrite status
    */
   getAuthorizationStatus(): Promise<AuthorizationStatusResponse>;
 }

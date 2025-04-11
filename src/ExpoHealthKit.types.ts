@@ -15,6 +15,8 @@ export type PermissionsResponse = {
 export type AuthorizationStatusResponse = {
   isAvailable: boolean;
   isAuthorized: boolean;
+  canRead: boolean;
+  canWrite: boolean;
 };
 
 export type ExpoHealthKitModuleEvents = {
