@@ -3,6 +3,7 @@ import { NativeModule, requireNativeModule } from "expo";
 import {
   ExpoHealthKitModuleEvents,
   PermissionsResponse,
+  AuthorizationStatusResponse,
 } from "./ExpoHealthKit.types";
 
 declare class ExpoHealthKitModule extends NativeModule<ExpoHealthKitModuleEvents> {
@@ -26,6 +27,12 @@ declare class ExpoHealthKitModule extends NativeModule<ExpoHealthKitModuleEvents
    * @param endDate End date for the query
    */
   getStepCount(startDate: number, endDate: number): Promise<number>;
+
+  /**
+   * Check if HealthKit is available and if step count data has been authorized
+   * @returns Object with isAvailable and isAuthorized status
+   */
+  getAuthorizationStatus(): Promise<AuthorizationStatusResponse>;
 }
 
 // This call loads the native module object from the JSI.

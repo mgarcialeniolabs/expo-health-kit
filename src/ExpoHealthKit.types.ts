@@ -12,6 +12,11 @@ export type PermissionsResponse = {
   success: boolean;
 };
 
+export type AuthorizationStatusResponse = {
+  isAvailable: boolean;
+  isAuthorized: boolean;
+};
+
 export type ExpoHealthKitModuleEvents = {
   onChange: (params: ChangeEventPayload) => void;
   onPermissionsResult: (params: PermissionsResponse) => void;

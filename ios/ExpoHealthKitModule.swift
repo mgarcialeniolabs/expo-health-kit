@@ -116,5 +116,31 @@ public class ExpoHealthKitModule: Module {
       
       healthStore.execute(query)
     }
+    
+    // Check if HealthKit is available and authorized for the requested data types
+    AsyncFunction("getAuthorizationStatus") { (promise: Promise) in
+      // Check if HealthKit is available on the device
+      let isAvailable = HKHealthStore.isHealthDataAvailable()
+      
+      if !isAvailable {
+        promise.resolve([
+          "isAvailable": false,
+          "isAuthorized": false
+        ])
+        return
+      }
+      
+      // Check authorization status for step count
+      let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+      
+      let authStatus = healthStore.authorizationStatus(for: stepsType)
+      
+      let isAuthorized = (authStatus == .sharingAuthorized)
+      
+      promise.resolve([
+        "isAvailable": true,
+        "isAuthorized": isAuthorized
+      ])
+    }
   }
 }
