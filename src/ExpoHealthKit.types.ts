@@ -1,19 +1,22 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+// HealthKit data types
+export type HealthKitDataType =
+  | "steps"
+  | "heartRate"
+  | "activeEnergy"
+  | "height"
+  | "weight"
+  | "bloodGlucose"
+  | "bloodPressure";
 
-export type OnLoadEventPayload = {
-  url: string;
+export type PermissionsResponse = {
+  success: boolean;
 };
 
 export type ExpoHealthKitModuleEvents = {
   onChange: (params: ChangeEventPayload) => void;
+  onPermissionsResult: (params: PermissionsResponse) => void;
 };
 
 export type ChangeEventPayload = {
   value: string;
-};
-
-export type ExpoHealthKitViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
-  style?: StyleProp<ViewStyle>;
 };

@@ -1,6 +1,9 @@
 import ExpoModulesCore
+import HealthKit
 
 public class ExpoHealthKitModule: Module {
+  private let healthStore = HKHealthStore()
+  
   // Each module class must implement the definition function. The definition consists of components
   // that describes the module's functionality and behavior.
   // See https://docs.expo.dev/modules/module-api for more details about available components.
@@ -16,7 +19,7 @@ public class ExpoHealthKitModule: Module {
     ])
 
     // Defines event names that the module can send to JavaScript.
-    Events("onChange")
+    Events("onChange", "onPermissionsResult")
 
     // Defines a JavaScript synchronous function that runs the native code on the JavaScript thread.
     Function("hello") {
@@ -31,18 +34,87 @@ public class ExpoHealthKitModule: Module {
         "value": value
       ])
     }
-
-    // Enables the module to be used as a native view. Definition components that are accepted as part of the
-    // view definition: Prop, Events.
-    View(ExpoHealthKitView.self) {
-      // Defines a setter for the `url` prop.
-      Prop("url") { (view: ExpoHealthKitView, url: URL) in
-        if view.webView.url != url {
-          view.webView.load(URLRequest(url: url))
+    
+    // Check if HealthKit is available on the device
+    AsyncFunction("isHealthKitAvailable") { () -> Bool in
+      return HKHealthStore.isHealthDataAvailable()
+    }
+    
+    // Request permissions for steps data
+    AsyncFunction("requestPermissions") { () -> Promise in
+      return Promise { resolver in
+        guard HKHealthStore.isHealthDataAvailable() else {
+          resolver.reject(
+            "E_HEALTHKIT_UNAVAILABLE",
+            "HealthKit is not available on this device"
+          )
+          return
+        }
+        
+        let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        
+        healthStore.requestAuthorization(toShare: [], read: [stepsType]) { success, error in
+          if let error = error {
+            resolver.reject(
+              "E_HEALTHKIT_PERMISSIONS",
+              "Failed to request HealthKit permissions: \(error.localizedDescription)"
+            )
+            return
+          }
+          
+          self.sendEvent("onPermissionsResult", [
+            "success": success
+          ])
+          
+          resolver.resolve([
+            "success": success
+          ])
         }
       }
-
-      Events("onLoad")
+    }
+    
+    // Fetch step count for a specific time period
+    AsyncFunction("getStepCount") { (startDate: Date, endDate: Date) -> Promise in
+      return Promise { resolver in
+        guard HKHealthStore.isHealthDataAvailable() else {
+          resolver.reject(
+            "E_HEALTHKIT_UNAVAILABLE",
+            "HealthKit is not available on this device"
+          )
+          return
+        }
+        
+        let stepsQuantityType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        
+        let predicate = HKQuery.predicateForSamples(
+          withStart: startDate,
+          end: endDate,
+          options: .strictStartDate
+        )
+        
+        let query = HKStatisticsQuery(
+          quantityType: stepsQuantityType,
+          quantitySamplePredicate: predicate,
+          options: .cumulativeSum
+        ) { _, result, error in
+          guard let result = result, let sum = result.sumQuantity() else {
+            if let error = error {
+              resolver.reject(
+                "E_HEALTHKIT_QUERY_ERROR",
+                "Failed to fetch step count: \(error.localizedDescription)"
+              )
+            } else {
+              resolver.resolve(0)
+            }
+            return
+          }
+          
+          let steps = sum.doubleValue(for: HKUnit.count())
+          resolver.resolve(steps)
+        }
+        
+        healthStore.execute(query)
+      }
     }
   }
 }
