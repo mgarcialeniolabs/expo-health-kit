@@ -25,7 +25,7 @@ declare class ExpoHealthKitModule extends NativeModule<ExpoHealthKitModuleEvents
    * @param startDate Start date for the query
    * @param endDate End date for the query
    */
-  getStepCount(startDate: Date, endDate: Date): Promise<number>;
+  getStepCount(startDate: number, endDate: number): Promise<number>;
 }
 
 // This call loads the native module object from the JSI.
