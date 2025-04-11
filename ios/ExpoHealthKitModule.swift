@@ -44,8 +44,8 @@ public class ExpoHealthKitModule: Module {
     AsyncFunction("requestPermissions") { (promise: Promise) in
       guard HKHealthStore.isHealthDataAvailable() else {
         promise.reject(
-          exception: "E_HEALTHKIT_UNAVAILABLE",
-          message: "HealthKit is not available on this device"
+          "E_HEALTHKIT_UNAVAILABLE",
+          "HealthKit is not available on this device"
         )
         return
       }
@@ -55,8 +55,8 @@ public class ExpoHealthKitModule: Module {
       healthStore.requestAuthorization(toShare: [], read: [stepsType]) { success, error in
         if let error = error {
           promise.reject(
-            exception: "E_HEALTHKIT_PERMISSIONS",
-            message: "Failed to request HealthKit permissions: \(error.localizedDescription)"
+            "E_HEALTHKIT_PERMISSIONS",
+            "Failed to request HealthKit permissions: \(error.localizedDescription)"
           )
           return
         }
@@ -75,8 +75,8 @@ public class ExpoHealthKitModule: Module {
     AsyncFunction("getStepCount") { (startDate: Date, endDate: Date, promise: Promise) in
       guard HKHealthStore.isHealthDataAvailable() else {
         promise.reject(
-          exception: "E_HEALTHKIT_UNAVAILABLE",
-          message: "HealthKit is not available on this device"
+          "E_HEALTHKIT_UNAVAILABLE",
+          "HealthKit is not available on this device"
         )
         return
       }
@@ -97,8 +97,8 @@ public class ExpoHealthKitModule: Module {
         guard let result = result, let sum = result.sumQuantity() else {
           if let error = error {
             promise.reject(
-              exception: "E_HEALTHKIT_QUERY_ERROR",
-              message: "Failed to fetch step count: \(error.localizedDescription)"
+              "E_HEALTHKIT_QUERY_ERROR",
+              "Failed to fetch step count: \(error.localizedDescription)"
             )
           } else {
             promise.resolve(0)
