@@ -1,17 +1,10 @@
 {
   "platforms": [
-    "apple",
-    "android",
-    "web"
+    "apple"
   ],
   "apple": {
     "modules": [
       "ExpoHealthKitModule"
-    ]
-  },
-  "android": {
-    "modules": [
-      "expo.modules.healthkit.ExpoHealthKitModule"
     ]
   }
 }
